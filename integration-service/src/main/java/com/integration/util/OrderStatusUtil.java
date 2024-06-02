@@ -1,19 +1,16 @@
 package com.integration.util;
 
-import static order.Order.OrderStatus;
-import static order.Order.OrderStatus.*;
-
 public class OrderStatusUtil {
-    public static OrderStatus mapStringToOrderStatus(String status) {
+    public static int mapStringToOrderStatus(String status) {
         switch (status) {
             case "0" -> {
-                return CREATED;
+                return 0;
             }
             case "1" -> {
-                return SHIPPED;
+                return 1;
             }
             case "2" -> {
-                return DELIVERED;
+                return 2;
             }
             default -> throw new IllegalArgumentException("Unknown order status: " + status);
         }

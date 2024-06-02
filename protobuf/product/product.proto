@@ -8,7 +8,7 @@ package product;
 option go_package = "github.com/hub335/code-test/order-handling-system/product";
 
 service ProductService {
-  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc CreateProduct(CreateProductRequest) returns (               );
   rpc DeleteProduct(google.protobuf.StringValue) returns (google.protobuf.Empty);
   rpc GetProductByPid(google.protobuf.StringValue) returns (ProductResponse);
   rpc GetProductsByPids(StringsRequest) returns (ProductsResponse);

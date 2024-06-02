@@ -2,19 +2,16 @@ package com.integration.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.protobuf.StringValue;
-import com.integration.exception.UserAlreadyExistsException;
 import com.integration.grpc.OrderServiceClient;
+import com.integration.grpc.ProductServiceClient;
 import com.integration.grpc.UserServiceClient;
 import com.integration.model.OrderCsv;
 import com.integration.model.ProcessedOrder;
-import com.integration.model.ProductData;
 import com.integration.util.OrderStatusUtil;
-import com.integration.util.PriceUtil;
 import io.grpc.StatusRuntimeException;
 import order.Order;
 import org.springframework.stereotype.Service;
-import user.User;
+import product.Product;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,11 +20,10 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import static com.google.protobuf.StringValue.of;
-import static java.lang.String.*;
 import static order.Order.*;
+import static order.Order.OrderStatus.*;
 import static user.User.*;
 
 @Service
@@ -39,7 +35,7 @@ public class IntegrationService {
 
     private final OrderServiceClient orderServiceClient;
 
-    private final JsonDataService jsonDataService;
+    private final ProductServiceClient productServiceClient;
 
     private static final String OUTPUT_FILE_PATH = "/Users/fayaazuddinalimohammad/Downloads/ohs-api-test/integration-service/src/main/resources/output/processed-orders.json";
     private static final DateTimeFormatter INPUT_DATE_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
@@ -47,31 +43,20 @@ public class IntegrationService {
 
     public IntegrationService(CsvReaderService csvReaderService,
                               UserServiceClient userServiceClient,
-                              OrderServiceClient orderServiceClient,
-                              JsonDataService jsonDataService) {
+                              OrderServiceClient orderServiceClient, ProductServiceClient productServiceClient) {
         this.csvReaderService = csvReaderService;
         this.userServiceClient = userServiceClient;
         this.orderServiceClient = orderServiceClient;
-        this.jsonDataService = jsonDataService;
+        this.productServiceClient = productServiceClient;
+
     }
 
 
     public void processCsvFile(String filePath) throws IOException {
         List<OrderCsv> orders = csvReaderService.readOrders(filePath);
-        List<ProductData> products = jsonDataService.getProducts();
         List<ProcessedOrder> processedOrders = new ArrayList<>();
         for (OrderCsv order : orders) {
 
-            Optional<ProductData> productOpt = products.stream()
-                    .filter(p -> p.getPid().equals(order.getProductPid()))
-                    .findFirst();
-
-            if (productOpt.isEmpty()) {
-                System.err.println("Product with PID " + order.getProductPid() + " not found.");
-                continue;
-            }
-
-            ProductData productData = productOpt.get();
             String userPid;
 
             // Create user
@@ -98,22 +83,23 @@ public class IntegrationService {
             }
 
             // Create order
-            Product productRequest = Product.newBuilder()
-                    .setPid(order.getProductPid())
-                    .setPricePerUnit(PriceUtil.parsePrice(productData.getPrice_per_unit()))
+            Product.ProductResponse productResponse = productServiceClient.getProductByPid(of(order.getProductPid()));
+            Order.Product productDetails = Order.Product.newBuilder()
+                    .setPid(productResponse.getPid())
+                    .setPricePerUnit(productResponse.getPricePerUnit())
                     .setQuantity(Integer.parseInt(order.getQuantity()))
                     .build();
             String dateCreatedStr = order.getDateCreated();
             LocalDate dateCreated = ZonedDateTime.parse(dateCreatedStr, INPUT_DATE_FORMATTER).toLocalDate();
             String formattedDateCreated = dateCreated.format(OUTPUT_DATE_FORMATTER);
-
+            var orderStatus = order.getOrderStatus();
 
             CreateOrderRequest orderRequest = CreateOrderRequest.newBuilder()
-                    .addProducts(productRequest)
+                    .addProducts(productDetails)
                     .setUserPid(userPid)
                     .setDateCreated(of(formattedDateCreated))
-                    .setStatusValue(Integer.parseInt(order.getOrderStatus()))
-                    .setPricePerUnit(PriceUtil.parsePrice(productData.getPrice_per_unit()))
+                    .setStatusValue(OrderStatusUtil.mapStringToOrderStatus(orderStatus))
+                    .setPricePerUnit(productResponse.getPricePerUnit())
                     .setQuantity(Integer.parseInt(order.getQuantity()))
                     .setDateDelivered(of(ZonedDateTime
                             .now()
@@ -128,8 +114,8 @@ public class IntegrationService {
             processedOrders.add(processedOrder);
 
             writeProcessedOrdersToJson(processedOrders);
-            // Processed data can be saved or logged
-            System.out.println("Processed Order - UserPid: " + userPid + ", OrderPid: " + orderResponse.getPid() + ", SupplierPid: " + order.getSupplierPid());
+
+            System.out.println("Processed Order - UserPid: " + userPid + ", OrderPid: " + /*orderResponse.getPid() +*/ ", SupplierPid: " + order.getSupplierPid());
         }
     }
 
