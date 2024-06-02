@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: integration-service
+  profiles:
+    active: local
+
+
+grpc:
+  integration-service:
+    host : localhost
+    port : 6565
+  user-service:
+    host: localhost
+    port: 50054
+  order-service:
+    host: localhost
+    port: 50053
+server:
+  port: 1234

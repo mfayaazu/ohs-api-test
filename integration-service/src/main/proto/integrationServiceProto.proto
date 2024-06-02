@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package integration;
+
+service IntegrationService {
+  rpc ProcessCsvFile(ProcessCsvRequest) returns (ProcessCsvResponse);
+}
+
+message ProcessCsvRequest {
+  string file_path = 1;
+}
+
+message ProcessCsvResponse {
+  string message = 1;
+}

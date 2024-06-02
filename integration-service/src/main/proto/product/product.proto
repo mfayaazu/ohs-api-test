@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package product;
+
+option go_package = "github.com/hub335/code-test/order-handling-system/product";
+
+service ProductService {
+  rpc CreateProduct(CreateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct(google.protobuf.StringValue) returns (google.protobuf.Empty);
+  rpc GetProductByPid(google.protobuf.StringValue) returns (ProductResponse);
+  rpc GetProductsByPids(StringsRequest) returns (ProductsResponse);
+  rpc Search(ProductSearchFilter) returns (ProductsResponse);
+  rpc UpdateProduct(ProductUpdateRequest) returns (ProductResponse);
+}
+
+message StringsRequest {
+  repeated string request = 1;
+}
+
+message ProductResponse {
+  string pid = 1;
+  float pricePerUnit = 2;
+  string name = 3;
+}
+
+message ProductSearchFilter {
+  google.protobuf.FloatValue pricePerUnit = 2;
+  google.protobuf.StringValue name = 3;
+}
+
+message ProductUpdateRequest {
+  string pid = 1;
+  google.protobuf.FloatValue pricePerUnit = 2;
+  google.protobuf.StringValue name = 3;
+}
+
+message ProductsResponse {
+  repeated ProductResponse products = 1;
+}
+
+message CreateProductRequest {
+  float pricePerUnit = 1;
+  string name = 2;
+  google.protobuf.StringValue pid = 3;
+}

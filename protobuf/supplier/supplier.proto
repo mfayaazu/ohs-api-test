@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package supplier;
+
+option go_package = "github.com/hub335/code-test/order-handling-system/supplier";
+
+service SupplierService {
+  rpc CreateSupplier(CreateSupplierRequest) returns (SupplierResponse);
+  rpc DeleteSupplier(google.protobuf.StringValue) returns (google.protobuf.Empty);
+  rpc GetSupplierByPid(google.protobuf.StringValue) returns (SupplierResponse);
+  rpc GetSuppliersByPids(StringsRequest) returns (SuppliersResponse);
+  rpc Search(SupplierSearchFilter) returns (SuppliersResponse);
+  rpc UpdateSupplierContact(SupplierUpdateRequest) returns (SupplierResponse);
+}
+
+message StringsRequest {
+  repeated string request = 1;
+}
+
+message SupplierResponse {
+  string pid = 1;
+  string name = 2;
+  Contact contact = 3;
+}
+
+message SupplierUpdateRequest {
+  string pid = 1;
+  Contact contact = 2;
+  google.protobuf.StringValue name = 3;
+}
+
+message SupplierSearchFilter {
+  google.protobuf.StringValue name = 2;
+  Contact contact = 3;
+}
+
+message SuppliersResponse {
+  repeated SupplierResponse suppliers = 1;
+}
+
+message CreateSupplierRequest {
+  string name = 1;
+  Contact contact = 2;
+  google.protobuf.StringValue pid = 3;
+}
+
+
+message Contact {
+  google.protobuf.StringValue email = 1;
+  google.protobuf.StringValue phoneNumber = 2;
+}

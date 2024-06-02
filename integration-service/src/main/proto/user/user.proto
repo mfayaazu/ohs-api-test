@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package user;
+
+option go_package = "github.com/hub335/code-test/order-handling-system/user";
+
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (UserResponse);
+  rpc DeleteUser(google.protobuf.StringValue) returns (google.protobuf.Empty);
+  rpc GetUserByPid(google.protobuf.StringValue) returns (UserResponse);
+  rpc GetUsersByPids(StringsRequest) returns (UsersResponse);
+  rpc Search(UserSearchFilter) returns (UsersResponse);
+  rpc UpdateUser(UserUpdateRequest) returns (UserResponse);
+  rpc AddPaymentMethod(AddPaymentMethodRequest) returns (google.protobuf.Empty);
+  rpc RemovePaymentMethod(RemovePaymentMethodRequest) returns (google.protobuf.Empty);
+}
+
+message StringsRequest {
+  repeated string request = 1;
+}
+
+message UserResponse {
+  string pid = 1;
+  string fullName = 2;
+  string email = 4;
+  ShippingAddress address = 3;
+  repeated PaymentMethod paymentMethods = 5;
+}
+
+message UsersResponse {
+  repeated UserResponse users = 1;
+}
+
+message CreateUserRequest {
+  google.protobuf.StringValue fullName = 1;
+  string email = 2;
+  ShippingAddress address = 3;
+  repeated PaymentMethod paymentMethods = 4;
+  google.protobuf.StringValue password = 5;
+}
+
+message UserUpdateRequest {
+  google.protobuf.StringValue fullName = 1;
+  google.protobuf.StringValue email = 2;
+  ShippingAddress address = 3;
+  string pid = 5;
+}
+
+message RemovePaymentMethodRequest {
+  string userPid = 1;
+  string creditCardNumber = 2;
+}
+
+message AddPaymentMethodRequest {
+  string userPid = 1;
+  PaymentMethod paymentMethod = 2;
+}
+
+message UserSearchFilter {
+  google.protobuf.StringValue fullName = 1;
+  google.protobuf.StringValue email = 2;
+  google.protobuf.StringValue address = 3;
+  google.protobuf.StringValue country = 4;
+  google.protobuf.StringValue pid = 5;
+  google.protobuf.StringValue creditCardNumber = 6;
+  google.protobuf.StringValue creditCardType = 7;
+}
+
+message ShippingAddress {
+  google.protobuf.StringValue address = 1;
+  google.protobuf.StringValue country = 2;
+}
+
+message PaymentMethod {
+  google.protobuf.StringValue creditCardNumber = 1;
+  google.protobuf.StringValue creditCardType = 2;
+}

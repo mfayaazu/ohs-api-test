@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package order;
+
+option go_package = "github.com/hub335/code-test/order-handling-system/order";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (OrderResponse);
+  rpc DeleteOrder(google.protobuf.StringValue) returns (google.protobuf.Empty);
+  rpc GetOrderByPid(google.protobuf.StringValue) returns (OrderResponse);
+  rpc GetOrdersByPids(StringsRequest) returns (OrdersResponse);
+  rpc Search(OrderSearchFilter) returns (OrdersResponse);
+  rpc UpdateOrder(OrderUpdateRequest) returns (google.protobuf.Empty);
+  rpc getAllOrdersPageable(PageableRequest) returns (PageableResponse);
+  rpc RemoveProduct(RemoveProductRequest) returns (google.protobuf.Empty);
+  rpc AddProduct(AddProductRequest) returns (google.protobuf.Empty);
+  rpc UpdateProduct(UpdateProductRequest) returns (google.protobuf.Empty);
+}
+
+message StringsRequest {
+  repeated string request = 1;
+}
+
+message OrdersResponse {
+  repeated OrderResponse orders = 1;
+}
+
+message OrderResponse {
+  string pid = 1;
+  repeated Product products = 2;
+  string userPid = 3;
+  string dateCreated = 4;
+  OrderStatus status = 5;
+  google.protobuf.StringValue deliveryDate = 6;
+}
+
+message CreateOrderRequest {
+  repeated Product products = 1;
+  string userPid = 2;
+  google.protobuf.StringValue dateCreated = 3;
+  OrderStatus status = 4;
+  float pricePerUnit = 6;
+  int32 quantity = 7;
+  google.protobuf.StringValue dateDelivered = 8;
+}
+
+message OrderUpdateRequest {
+  google.protobuf.StringValue userPid = 1;
+  google.protobuf.StringValue dateCreated = 2;
+  google.protobuf.Int32Value status = 3;
+  string pid = 4;
+  google.protobuf.StringValue deliveryDate = 5;
+}
+
+message AddProductRequest {
+  Product product = 1;
+  string orderPid = 2;
+}
+
+message RemoveProductRequest {
+  string orderPid = 1;
+  string productPid = 2;
+}
+
+message UpdateProductRequest {
+  google.protobuf.Int32Value quantity = 1;
+  google.protobuf.DoubleValue pricePerUnit = 2;
+  string orderPid = 3;
+  string productPid = 4;
+}
+
+message OrderSearchFilter {
+  repeated Product products = 1;
+  google.protobuf.StringValue userPid = 2;
+  google.protobuf.StringValue dateCreated = 3;
+  OrderStatus status = 4;
+  google.protobuf.FloatValue pricePerUnit = 6;
+  google.protobuf.Int32Value quantity = 7;
+  google.protobuf.StringValue pid = 8;
+}
+
+message Product {
+  string pid = 1;
+  int32 quantity = 2;
+  double pricePerUnit = 3;
+}
+
+enum OrderStatus {
+  CREATED = 0;
+  SHIPPED = 1;
+  DELIVERED = 2;
+}
+
+
+message PageableRequest {
+  google.protobuf.Int64Value numberPerPage = 1;
+  google.protobuf.StringValue lastItemId = 2;
+}
+
+message PageableResponse {
+  repeated OrderResponse data = 1;
+  google.protobuf.Int64Value numberPerPage = 2;
+  google.protobuf.StringValue lastItemId = 3;
+  google.protobuf.Int64Value total = 4;
+  google.protobuf.Int64Value noOfItemsInBatch = 5;
+}

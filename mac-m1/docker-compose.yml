@@ -1,0 +1,157 @@
+version: '3.9'
+services:
+  keycloak:
+    image: public.ecr.aws/vgcslabs/dev-keycloak:arm64
+    container_name: keycloak
+    command:
+      - --spi-connections-jpa-default-migration-strategy=update
+      - -Dkeycloak.migration.action=import
+      - -Dkeycloak.migration.provider=dir
+      - -Dkeycloak.migration.dir=/import
+      - -Dkeycloak.migration.strategy=OVERWRITE_EXISTING
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../bootstrap/keycloak:/export
+      - ../bootstrap/keycloak/import:/import
+    env_file:
+      - ../keycloak.env
+    depends_on:
+      postgres:
+        condition: service_started
+    networks:
+      - ohs
+
+  user-service:
+    image: public.ecr.aws/vgcslabs/ohs/user:arm64
+    container_name: user
+    ports:
+      - "8082:8082"
+      - "50054:50054"
+    env_file:
+      - ../user.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - ohs
+
+  postgres:
+    image: postgres:alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    env_file:
+      - ../postgres.env
+    volumes:
+      - ../data/postgres:/var/lib/postgresql/data
+    networks:
+      - ohs
+
+  supplier:
+    image: public.ecr.aws/vgcslabs/ohs/supplier:arm64
+    container_name: supplier
+    ports:
+      - "50051:50051"
+    volumes:
+      - type: bind
+        source: ../bootstrap/supplier/.env
+        target: /.env
+
+      - type: bind
+        source: ../bootstrap/supplier/supplier-data.json
+        target: /supplier-data.json
+    networks:
+      - ohs
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  product:
+    image: public.ecr.aws/vgcslabs/ohs/product:arm64
+    container_name: product
+    ports:
+      - "50052:50052"
+    volumes:
+      - type: bind
+        source: ../bootstrap/product/.env
+        target: /.env
+
+      - type: bind
+        source: ../bootstrap/product/product-data.json
+        target: /product-data.json
+    networks:
+      - ohs
+
+  order:
+    image: public.ecr.aws/vgcslabs/ohs/order:arm64
+    container_name: order
+    ports:
+      - "50053:50053"
+    volumes:
+      - type: bind
+        source: ../bootstrap/order/.env
+        target: /.env
+    networks:
+      - ohs
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    container_name: mongodb
+    image: mongo:5
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+    ports:
+      - "27017:27017"
+    env_file:
+      - ../mongo.env
+    networks:
+      - ohs
+
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express:1.0.0-alpha.4
+    ports:
+      - "8081:8081"
+    env_file:
+      - ../mongo.env
+    networks:
+      - ohs
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  jaeger:
+    image: jaegertracing/all-in-one
+    container_name: jaeger
+    env_file:
+      - ../jaeger.env
+    ports:
+      - protocol: udp
+        target: 6831
+        published: 6831
+
+      - protocol: udp
+        target: 6832
+        published: 6832
+
+      - "5778:5778"
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+      - "14250:14250"
+      - "14268:14268"
+      - "14269:14269"
+      - "9411:9411"
+    networks:
+      - ohs
+
+networks:
+  ohs:
+
+volumes:
+  data:
