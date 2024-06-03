@@ -23,4 +23,8 @@ public class OrderServiceClient {
     public Order.OrderResponse createOrder(Order.CreateOrderRequest request) {
         return orderServiceBlockingStub.createOrder(request);
     }
+
+    public Order.PageableResponse getALlOrders(Order.PageableRequest request){
+        return  orderServiceBlockingStub.getAllOrdersPageable(request);
+    }
 }

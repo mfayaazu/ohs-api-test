@@ -1,0 +1,9 @@
+[ {
+  "userPid" : "user-id",
+  "orderPid" : "order-id",
+  "supplierPid" : "supplier1"
+}, {
+  "userPid" : "user-id",
+  "orderPid" : "order-id",
+  "supplierPid" : "supplier2"
+} ]

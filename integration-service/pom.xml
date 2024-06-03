@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.3.0</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.integration</groupId>
 	<artifactId>integration-service</artifactId>
@@ -66,6 +66,29 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-java</artifactId>
+			<version>7.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-spring</artifactId>
+			<version>7.0.0</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-junit</artifactId>
+			<version>7.0.0</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -133,6 +156,43 @@
 					<source>17</source>
 					<target>17</target>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.44.0</version>
+				<configuration>
+					<images>
+						<image>
+							<dockerFile>${project.basedir}/Dockerfile</dockerFile>
+							<build>
+								<tags>
+									<tag>integration-service</tag>
+								</tags>
+							</build>
+							<run>
+								<dockerComposeFile>${project.basedir}/docker-compose.yml</dockerComposeFile>
+							</run>
+						</image>
+					</images>
+				</configuration>
+				<executions>
+					<execution>
+						<id>start-docker-compose</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>build</goal>
+							<goal>start</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>stop-docker-compose</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

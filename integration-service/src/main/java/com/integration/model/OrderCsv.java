@@ -1,9 +1,14 @@
 package com.integration.model;
 
 import com.opencsv.bean.CsvBindByName;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class OrderCsv {
     @CsvBindByName
     private String id;

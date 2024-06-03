@@ -1,0 +1,3 @@
+id,first_name,last_name,email,supplier_pid,credit_card_number,credit_card_type,order_id,product_pid,shipping_address,country,date_created,quantity,full_name,order_status
+1,Austin,Humphries,ahumphries0@mac.com,7c835d2e-c277-4b99-8b15-677a3add5c04,4917352465154663,visa-electron,8312f459-98d0-4f7b-af08-f17c950d873b,d73e6795-99d3-42fb-a33c-cd0d5cd60e36,894 Declaration Park,Portugal,2022-06-24T10:45:52Z,91,Austin Humphries,2
+2,Willi,Petheridge,wpetheridge1@comcast.net,ee865347-de3d-407e-8f1a-09c7d521c465,5415103981077514,mastercard,bab49985-3d52-4246-8562-329a6c9691be,2548655e-e856-4be4-8527-ae900c96f490,659 Waxwing Point,Albania,2023-01-16T02:21:20Z,40,Willi Petheridge,0

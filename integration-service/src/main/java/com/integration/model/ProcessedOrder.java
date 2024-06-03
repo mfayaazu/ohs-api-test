@@ -1,6 +1,14 @@
 package com.integration.model;
 
-public record ProcessedOrder(String userPid,
-                             String orderPid,
-                             String supplierPid) {
+import lombok.*;
+
+@Getter
+@Setter
+@RequiredArgsConstructor
+@AllArgsConstructor
+public class ProcessedOrder {
+
+    private String userPid;
+    private String orderPid;
+    private String supplierPid;
 }
