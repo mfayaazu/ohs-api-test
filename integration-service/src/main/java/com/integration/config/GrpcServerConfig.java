@@ -7,6 +7,7 @@ import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.retry.annotation.EnableRetry;
 import user.UserServiceGrpc;
 
 import javax.annotation.PostConstruct;
@@ -14,6 +15,7 @@ import javax.annotation.PreDestroy;
 import java.io.IOException;
 
 @Configuration
+@EnableRetry
 public class GrpcServerConfig {
 
     private final IntegrationServiceImpl integrationServiceImpl;
