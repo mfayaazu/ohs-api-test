@@ -41,7 +41,7 @@ public class IntegrationService {
 
     private final ProductServiceClient productServiceClient;
 
-    private static final String OUTPUT_FILE_PATH = "src/main/resources/output/processed-orders.json";
+    private static final String OUTPUT_FILE_PATH = "/Users/fayaazuddinalimohammad/Downloads/ohs-api-test/integration-service/src/main/resources/output/processed-orders.json";
     private static final DateTimeFormatter INPUT_DATE_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
     private static final DateTimeFormatter OUTPUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
