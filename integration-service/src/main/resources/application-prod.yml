@@ -1,0 +1,24 @@
+logging:
+  level:
+    root: WARN
+
+integration:
+  input-file-path: /var/app/input/order-integration.csv
+  output-file-path: /var/app/output/processed-orders.json
+
+grpc:
+  integration-service:
+    host : prod.integration-service.local
+    port : 6565
+  user-service:
+    host: prod.user-service.local
+    port: 50054
+  order-service:
+    host: prod.order-service.local
+    port: 50053
+  product-service:
+    host: prod.product-service.local
+    port: 50052
+
+server:
+  port: 1234

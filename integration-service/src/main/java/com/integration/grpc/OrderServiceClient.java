@@ -20,8 +20,8 @@ public class OrderServiceClient {
         orderServiceBlockingStub = OrderServiceGrpc.newBlockingStub(channel);
     }
 
-    public Order.OrderResponse createOrder(Order.CreateOrderRequest request) {
-        return orderServiceBlockingStub.createOrder(request);
+    public void createOrder(Order.CreateOrderRequest request) {
+        orderServiceBlockingStub.createOrder(request);
     }
 
     public Order.PageableResponse getALlOrders(Order.PageableRequest request){

@@ -2,157 +2,162 @@ package com.integration.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import com.google.protobuf.Int64Value;
-import com.google.protobuf.StringValue;
-import com.integration.grpc.OrderServiceClient;
-import com.integration.grpc.ProductServiceClient;
-import com.integration.grpc.UserServiceClient;
+import com.integration.config.IntegrationProperties;
+import com.integration.handler.OrderServiceHandler;
+import com.integration.handler.UserServiceHandler;
 import com.integration.model.OrderCsv;
 import com.integration.model.ProcessedOrder;
-import com.integration.util.OrderStatusUtil;
+import com.integration.model.Result;
 import io.grpc.StatusRuntimeException;
-import order.Order;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
-import product.Product;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static com.google.protobuf.StringValue.of;
-import static order.Order.*;
-import static order.Order.OrderStatus.*;
-import static user.User.*;
-
 @Service
+@Slf4j
 public class IntegrationService {
 
     private final CsvReaderService csvReaderService;
 
-    private final UserServiceClient userServiceClient;
+    private final UserServiceHandler userServiceHandler;
+    private final OrderServiceHandler orderServiceHandler;
+    private final IntegrationProperties integrationProperties;
 
-    private final OrderServiceClient orderServiceClient;
-
-    private final ProductServiceClient productServiceClient;
-
-    private static final String OUTPUT_FILE_PATH = "/Users/fayaazuddinalimohammad/Downloads/ohs-api-test/integration-service/src/main/resources/output/processed-orders.json";
-    private static final DateTimeFormatter INPUT_DATE_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
-    private static final DateTimeFormatter OUTPUT_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     public IntegrationService(CsvReaderService csvReaderService,
-                              UserServiceClient userServiceClient,
-                              OrderServiceClient orderServiceClient, ProductServiceClient productServiceClient) {
+                              UserServiceHandler userServiceHandler,
+                              OrderServiceHandler orderServiceHandler, IntegrationProperties integrationProperties) {
         this.csvReaderService = csvReaderService;
-        this.userServiceClient = userServiceClient;
-        this.orderServiceClient = orderServiceClient;
-        this.productServiceClient = productServiceClient;
+        this.userServiceHandler = userServiceHandler;
+        this.orderServiceHandler = orderServiceHandler;
+        this.integrationProperties = integrationProperties;
 
     }
 
+    /**
+     * Processes the CSV file to create users and orders.
+     *
+     * @param filePath the path to the CSV file
+     * @throws IOException if an I/O error occurs
+     */
+    @Retryable(retryFor = {IOException.class, StatusRuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 2000))
     public void processCsvFile(String filePath) throws IOException {
         List<OrderCsv> orders = csvReaderService.readOrders(filePath);
         List<ProcessedOrder> processedOrders = new ArrayList<>();
 
+        createUsersAndOrders(orders, processedOrders);
+        WriteProcessedOrdersToOutputFile(processedOrders);
+    }
+
+    /**
+     * Creates users and orders based on the provided list of orders.
+     *
+     * <p>This method processes each order in the given list, attempting to create a user and an order
+     * for each one. If user creation or order retrieval fails, the order is skipped. Successfully
+     * processed orders are added to the list of processed orders.</p>
+     *
+     * @param orders          the list of orders to process
+     * @param processedOrders the list to which successfully processed orders are added
+     */
+    private void createUsersAndOrders(List<OrderCsv> orders, List<ProcessedOrder> processedOrders) {
         for (OrderCsv order : orders) {
-            String userPid = getUserIdFromUserService(order);
-            if (userPid == null) continue;
-            Result result = getOrderAndSupplierId(order, userPid);
-            writeProcessedDataToJsonFile(userPid, result, processedOrders);
+            var fetchUserPid = getUserIdFromUserService(order);
+            if (fetchUserPid.isEmpty()) {
+                log.warn("Skipping order due to user creation failure: {} ", order);
+                continue;
+            }
+            String userPid = fetchUserPid.get();
+
+            var fetchOrderAndSupplierId = getOrderAndSupplierId(order, fetchUserPid.get());
+            if (fetchOrderAndSupplierId.isEmpty()) {
+                log.warn("Skipping order due to order/supplier retrieval failure: {}", order);
+                continue;
+            }
+            var orderServiceResult = fetchOrderAndSupplierId.get();
+            processedOrders.add(new ProcessedOrder(userPid, orderServiceResult.orderId(), orderServiceResult.supplierPid()));
         }
     }
 
-    private String getUserIdFromUserService(OrderCsv order) {
-        String userPid;
-
-        // Create user
-        CreateUserRequest userRequest = CreateUserRequest.newBuilder()
-                .setFullName(of(order.getFirstName() + " " + order.getLastName()))
-                .setEmail(order.getEmail())
-                .setAddress(ShippingAddress
-                        .newBuilder()
-                        .setAddress(of(order.getShippingAddress()))
-                        .setCountry(of(order.getCountry()))
-                        .build())
-                .addPaymentMethods(PaymentMethod.newBuilder()
-                        .setCreditCardNumber(of(order.getCreditCardNumber()))
-                        .setCreditCardType(of(order.getCreditCardType()))
-                        .build())
-                .setPassword(of(" "))
-                .build();
+    /**
+     * Retrieves the user ID by creating a new user via the UserService.
+     *
+     * @param order the order data from the CSV
+     * @return the user ID or null if creation failed
+     */
+    @Retryable(retryFor = {StatusRuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    private Optional<String> getUserIdFromUserService(OrderCsv order) {
         try {
-            UserResponse userResponse = userServiceClient.createUser(userRequest);
-            userPid = userResponse.getPid();
+            return userServiceHandler.callUserService(order);
         } catch (StatusRuntimeException e) {
-            System.err.println(e.getMessage());
-            return null;
+            log.error("UserId Already Exists. User-Service returned 409 Conflict ");
         }
-        return userPid;
+        return Optional.empty();
     }
 
 
-    private void writeProcessedDataToJsonFile(String userPid, Result result, List<ProcessedOrder> processedOrders) {
-        ProcessedOrder processedOrder = new ProcessedOrder(userPid, result.orderId(), result.supplierPid());
-        processedOrders.add(processedOrder);
-
-        writeProcessedOrdersToJson(processedOrders);
+    /**
+     * Retrieves the order and supplier ID by querying the OrderService.
+     *
+     * @param order   the order data from the CSV
+     * @param userPid the user ID
+     * @return a Result object containing the supplier ID and order ID
+     */
+    @Retryable(retryFor = {StatusRuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 2000))
+    private Optional<Result> getOrderAndSupplierId(OrderCsv order, String userPid) {
+        try {
+            log.info("Calling Order-Service");
+            return orderServiceHandler.callOrderService(order, userPid);
+        } catch (StatusRuntimeException e) {
+            log.error("Error occurred when calling OrderService");
+        }
+        return Optional.empty();
     }
 
-    private Result getOrderAndSupplierId(OrderCsv order, String userPid) {
-        // Create order
-        Product.ProductResponse productResponse = productServiceClient.getProductByPid(of(order.getProductPid()));
-        Order.Product productDetails = Order.Product.newBuilder()
-                .setPid(productResponse.getPid())
-                .setPricePerUnit(productResponse.getPricePerUnit())
-                .setQuantity(Integer.parseInt(order.getQuantity()))
-                .build();
-        String dateCreatedStr = order.getDateCreated();
-        LocalDate dateCreated = ZonedDateTime.parse(dateCreatedStr, INPUT_DATE_FORMATTER).toLocalDate();
-        String formattedDateCreated = dateCreated.format(OUTPUT_DATE_FORMATTER);
-        var orderStatus = order.getOrderStatus();
-
-        CreateOrderRequest orderRequest = CreateOrderRequest.newBuilder()
-                .addProducts(productDetails)
-                .setUserPid(userPid)
-                .setDateCreated(of(formattedDateCreated))
-                .setStatus(OrderStatusUtil.mapStringToOrderStatus(orderStatus))
-                .setPricePerUnit(productResponse.getPricePerUnit())
-                .setQuantity(Integer.parseInt(order.getQuantity()))
-                .setDateDelivered(of(ZonedDateTime
-                        .now()
-                        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))))
-                .build();
-        //Creating order in Order-Service
-        orderServiceClient.createOrder(orderRequest);
-
-        PageableRequest requestPageable = PageableRequest.newBuilder().setNumberPerPage(Int64Value.of(100)).build();
-        PageableResponse pageableResponse = orderServiceClient.getALlOrders(requestPageable);
-
-        String supplierPid = order.getSupplierPid();
-        String orderId = pageableResponse.getDataList().stream().filter(s -> s.getUserPid().equals(userPid))
-                .findFirst()
-                .map(OrderResponse::getPid)
-                .orElse(null);
-
-        return new Result(supplierPid, orderId);
+    private void WriteProcessedOrdersToOutputFile(List<ProcessedOrder> processedOrders) {
+        try {
+            writeProcessedOrdersToJsonFile(processedOrders);
+            log.info("ProcessedOrders jSON File Created Successfully");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
-    private record Result(String supplierPid, String orderId) {
-    }
 
-    private void writeProcessedOrdersToJson(List<ProcessedOrder> processedOrders) {
+    /**
+     * Writes the list of processed orders to a JSON file.
+     *
+     * @param processedOrders the list of processed orders
+     */
+    private void writeProcessedOrdersToJsonFile(List<ProcessedOrder> processedOrders) {
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
 
+        String outputFilePath = integrationProperties.getOutputFilePath();
+        Path outputPath = Paths.get(outputFilePath).toAbsolutePath();
+        Path parentDir = outputPath.getParent();
+
         try {
-            writer.writeValue(new File(OUTPUT_FILE_PATH), processedOrders);
+            if (parentDir != null && !Files.exists(parentDir)) {
+                Files.createDirectories(parentDir);
+                log.info("Created directories for path: {}", parentDir.toAbsolutePath());
+            }
+
+            writer.writeValue(outputPath.toFile(), processedOrders);
+            log.info("Processed orders written to {}", outputFilePath);
         } catch (IOException e) {
-            e.printStackTrace();
+            log.error("Error writing processed orders to JSON: {}", e.getMessage());
         }
     }
+
+
 }
