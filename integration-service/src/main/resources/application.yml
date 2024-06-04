@@ -23,5 +23,5 @@ server:
   port: 8888
 
 integration:
-  input-file-path: /Users/fayaazuddinalimohammad/Downloads/ohs-api-test/integration-service/src/main/resources/input/order-integration.csv
-  output-file-path: /Users/fayaazuddinalimohammad/Downloads/ohs-api-test/integration-service/src/main/resources/output/processed-orders.json
+  input-file-path: src/main/resources/input/order-integration.csv
+  output-file-path: src/main/resources/output/processed-orders.json

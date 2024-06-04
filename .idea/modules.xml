@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/integration-service/integration-service.iml" filepath="$PROJECT_DIR$/integration-service/integration-service.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/ohs-api-test.iml" filepath="$PROJECT_DIR$/.idea/ohs-api-test.iml" />
     </modules>
   </component>

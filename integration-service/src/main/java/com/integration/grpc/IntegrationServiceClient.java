@@ -8,6 +8,8 @@ import io.grpc.ManagedChannelBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Paths;
+
 import static integration.IntegrationServiceProto.*;
 
 
@@ -26,7 +28,7 @@ public class IntegrationServiceClient {
 
     public String processCsvFile(String filePath) {
         ProcessCsvRequest request = ProcessCsvRequest.newBuilder()
-                .setFilePath(filePath)
+                .setFilePath(Paths.get(filePath).toAbsolutePath().toString())
                 .build();
         ProcessCsvResponse response = integrationServiceBlockingStub.processCsvFile(request);
         return response.getMessage();

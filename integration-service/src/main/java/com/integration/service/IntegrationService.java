@@ -143,7 +143,7 @@ public class IntegrationService {
         ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
 
         String outputFilePath = integrationProperties.getOutputFilePath();
-        Path outputPath = Paths.get(outputFilePath);
+        Path outputPath = Paths.get(outputFilePath).toAbsolutePath();
         Path parentDir = outputPath.getParent();
 
         try {
